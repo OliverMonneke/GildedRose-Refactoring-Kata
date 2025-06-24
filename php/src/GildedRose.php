@@ -6,120 +6,51 @@ namespace GildedRose;
 
 final class GildedRose
 {
-    private const MAX_QUALITY = 50;
-    private const MIN_QUALITY = 0;
+    /** @var ItemHandler[] */
+    private array $handlers;
 
     /**
      * @param Item[] $items
+     * @param ItemHandler[]|null $handlers
      */
     public function __construct(
-        private array $items
+        private array $items,
+        ?array $handlers = null
     ) {
+        $this->handlers = $handlers ?? $this->getDefaultHandlers();
     }
 
     public function updateQuality(): void
     {
         foreach ($this->items as $item) {
-            $this->updateItemQuality($item);
+            $handler = $this->findHandlerForItem($item);
+            $handler->updateQuality($item);
         }
     }
 
-    private function updateItemQuality(Item $item): void
+    private function findHandlerForItem(Item $item): ItemHandler
     {
-        if ($this->isAgedBrie($item) || $this->isBackstagePass($item)) {
-            $this->handleSpecialItems($item);
-        } else {
-            $this->handleNormalItems($item);
-        }
-
-        if (!$this->isSulfuras($item)) {
-            $item->sellIn = $item->sellIn - 1;
-        }
-
-        if ($item->sellIn < 0) {
-            $this->handleExpiredItems($item);
-        }
-    }
-
-    private function handleSpecialItems(Item $item): void
-    {
-        if ($this->canIncreaseQuality($item)) {
-            $this->increaseQuality($item);
-            
-            if ($this->isBackstagePass($item)) {
-                if ($item->sellIn < 11 && $this->canIncreaseQuality($item)) {
-                    $this->increaseQuality($item);
-                }
-                if ($item->sellIn < 6 && $this->canIncreaseQuality($item)) {
-                    $this->increaseQuality($item);
-                }
+        foreach ($this->handlers as $handler) {
+            if ($handler->handles($item)) {
+                return $handler;
             }
         }
+        
+        throw new \RuntimeException("No handler found for item: {$item->name}");
     }
 
-    private function handleNormalItems(Item $item): void
+    /**
+     * @return ItemHandler[]
+     */
+    private function getDefaultHandlers(): array
     {
-        if ($this->canDecreaseQuality($item) && !$this->isSulfuras($item)) {
-            $this->decreaseQuality($item);
-        }
-    }
-
-    private function handleExpiredItems(Item $item): void
-    {
-        if ($this->isAgedBrie($item)) {
-            if ($this->canIncreaseQuality($item)) {
-                $this->increaseQuality($item);
-            }
-        } elseif ($this->isBackstagePass($item)) {
-            $this->resetQuality($item);
-        } else {
-            if ($this->canDecreaseQuality($item) && !$this->isSulfuras($item)) {
-                $this->decreaseQuality($item);
-            }
-        }
-    }
-
-    private function increaseQuality(Item $item): void
-    {
-        if ($item->quality < self::MAX_QUALITY) {
-            $item->quality++;
-        }
-    }
-
-    private function decreaseQuality(Item $item): void
-    {
-        if ($item->quality > self::MIN_QUALITY) {
-            $item->quality--;
-        }
-    }
-
-    private function resetQuality(Item $item): void
-    {
-        $item->quality = self::MIN_QUALITY;
-    }
-
-    private function canIncreaseQuality(Item $item): bool
-    {
-        return $item->quality < self::MAX_QUALITY;
-    }
-
-    private function canDecreaseQuality(Item $item): bool
-    {
-        return $item->quality > self::MIN_QUALITY;
-    }
-
-    private function isAgedBrie(Item $item): bool
-    {
-        return $item->name === 'Aged Brie';
-    }
-
-    private function isBackstagePass(Item $item): bool
-    {
-        return $item->name === 'Backstage passes to a TAFKAL80ETC concert';
-    }
-
-    private function isSulfuras(Item $item): bool
-    {
-        return $item->name === 'Sulfuras, Hand of Ragnaros';
+        return [
+            new SulfurasHandler(),
+            new AgedBrieHandler(),
+            new BackstagePassHandler(),
+            new ConjuredItemHandler(),
+            new NormalItemHandler(), // Fallback handler - must be last
+        ];
     }
 }
+

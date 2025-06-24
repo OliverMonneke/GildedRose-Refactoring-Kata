@@ -158,26 +158,26 @@ class GildedRoseTest extends TestCase
 
     public function testConjuredItemBeforeSellDate(): void
     {
-        // Note: Conjured items are not yet implemented correctly in the legacy code
+        // Conjured items now correctly degrade twice as fast as normal items
         $items = [new Item('Conjured Mana Cake', 3, 6)];
         $gildedRose = new GildedRose($items);
         $gildedRose->updateQuality();
         
         $this->assertSame('Conjured Mana Cake', $items[0]->name);
         $this->assertSame(2, $items[0]->sellIn);
-        $this->assertSame(5, $items[0]->quality); // Currently degrades like normal item (should be 4)
+        $this->assertSame(4, $items[0]->quality); // Degrades by 2 instead of 1
     }
 
     public function testConjuredItemAfterSellDate(): void
     {
-        // Note: Conjured items are not yet implemented correctly in the legacy code
+        // Conjured items degrade 4x as fast after sell date (2x base * 2x expired)
         $items = [new Item('Conjured Mana Cake', -1, 6)];
         $gildedRose = new GildedRose($items);
         $gildedRose->updateQuality();
         
         $this->assertSame('Conjured Mana Cake', $items[0]->name);
         $this->assertSame(-2, $items[0]->sellIn);
-        $this->assertSame(4, $items[0]->quality); // Currently degrades like normal item (should be 2)
+        $this->assertSame(2, $items[0]->quality); // Degrades by 4 after sell date
     }
 
     public function testQualityNeverNegative(): void
