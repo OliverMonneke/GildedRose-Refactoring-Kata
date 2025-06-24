@@ -10,11 +10,17 @@ use PHPUnit\Framework\TestCase;
 
 class GildedRoseTest extends TestCase
 {
-    public function testFoo(): void
+    public function testNormalItemAtSellDate(): void
     {
         $items = [new Item('foo', 0, 0)];
         $gildedRose = new GildedRose($items);
         $gildedRose->updateQuality();
-        $this->assertSame('fixme', $items[0]->name);
+        
+        // Name should remain unchanged
+        $this->assertSame('foo', $items[0]->name);
+        // sellIn should decrease by 1
+        $this->assertSame(-1, $items[0]->sellIn);
+        // quality should not go below 0
+        $this->assertSame(0, $items[0]->quality);
     }
 }
